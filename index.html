@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dino Runner</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: white;
+            text-align: center;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+        }
+        .controls {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+        }
+        .control-btn {
+            width: 50%;
+            height: 100px;
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+        }
+        .jump {
+            background-color: lightblue;
+        }
+        .crouch {
+            background-color: lightcoral;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+        <button class="control-btn crouch" onmousedown="crouch(true)" onmouseup="crouch(false)">Crouch</button>
+        <button class="control-btn jump" ontouchstart="jump()" onclick="jump()">Jump</button>
+    </div>
+    <audio id="pointSound" src="point.mp3"></audio>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 800;
+        canvas.height = 400;
+
+        let dino = { x: 50, y: 300, width: 50, height: 50, velocityY: 0, gravity: 1, jumpPower: -18.5, crouching: false };
+        let cactus = { x: 1000, y: 300, width: 50, height: 50, speed: 6 };
+        let bird = { x: 1600, y: randomBirdHeight(), width: 40, height: 40, speed: 4 };
+        let score = 0;
+        let highScore = 0;
+        let gameOver = false;
+        let time = 0;
+        let nightMode = false;
+
+        function randomBirdHeight() {
+            let positions = [275, 300, 325];
+            return positions[Math.floor(Math.random() * positions.length)];
+        }
+
+        function jump() {
+            if (dino.y === 300 && !dino.crouching) {
+                dino.velocityY = dino.jumpPower;
+            }
+        }
+
+        function crouch(isCrouching) {
+            dino.crouching = isCrouching;
+            if (isCrouching) {
+                dino.height = 30;
+                dino.y = 320;
+            } else {
+                dino.height = 50;
+                dino.y = 300;
+            }
+        }
+
+        document.addEventListener("keydown", function(event) {
+            if (event.code === "Space") {
+                jump();
+            } else if (event.code === "ArrowDown") {
+                crouch(true);
+            }
+        });
+
+        document.addEventListener("keyup", function(event) {
+            if (event.code === "ArrowDown") {
+                crouch(false);
+            }
+        });
+
+        function update() {
+            if (gameOver) return;
+
+            dino.velocityY += dino.gravity;
+            dino.y += dino.velocityY;
+            if (dino.y > 300) dino.y = 300;
+
+            cactus.x -= cactus.speed;
+            if (cactus.x < -50) {
+                cactus.x = 1000 + Math.random() * 500;
+                score++;
+            }
+
+            bird.x -= bird.speed;
+            if (bird.x < -50) {
+                bird.x = 1600 + Math.random() * 700;
+                bird.y = randomBirdHeight();
+                score++;
+            }
+
+            if (score % 100 === 0 && score > 0) {
+                document.getElementById("pointSound").play();
+            }
+
+            if (score > highScore) {
+                highScore = score;
+            }
+
+            if (
+                (dino.x + dino.width > cactus.x && dino.x < cactus.x + cactus.width && dino.y + dino.height > cactus.y) ||
+                (dino.x + dino.width > bird.x && dino.x < bird.x + bird.width && dino.y + dino.height > bird.y)
+            ) {
+                gameOver = true;
+                alert("Game Over! Score: " + score + " | High Score: " + highScore);
+                document.location.reload();
+            }
+
+            time++;
+            if (time % 500 === 0) {
+                nightMode = !nightMode;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = nightMode ? "black" : "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = nightMode ? "white" : "black";
+            ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+            ctx.fillRect(cactus.x, cactus.y, cactus.width, cactus.height);
+            ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+            ctx.fillStyle = nightMode ? "white" : "black";
+            ctx.font = "20px Arial";
+            ctx.fillText("Score: " + score, 10, 30);
+            ctx.fillText("High Score: " + highScore, 10, 60);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
